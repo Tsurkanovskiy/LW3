@@ -7,23 +7,21 @@ import chart_studio.plotly as py
 chart_studio.tools.set_credentials_file(username='Serjo', api_key='k4eWHU3Ubbd13Zr6B8Ad')
 
 
-username = 'SERGIY'
+username = 'TESTING'
 password = '1111'
 databaseName = "localhost/db11g"
  
 connection = cx_Oracle.connect (username,password,databaseName)
  
 cursor = connection.cursor()
- 
-query = '''SELECT
-    player.player_name, played_matches
-FROM
-  player LEFT OUTER JOIN     
-    (SELECT player_name, count(player_name) AS played_matches
-      FROM participant 
-     GROUP by player_name) temp
-        ON player.player_name = temp.player_name
-ORDER BY played_matches'''
+
+
+query = '''SELECT *
+    FROM (SELECT player_name, count(player_name) AS played_matches
+      FROM work_table 
+      GROUP by player_name
+      ORDER BY played_matches DESC)
+      WHERE rownum <= 20'''
 
 
 cursor.execute (query)
@@ -33,46 +31,34 @@ played_games = []
 
 data = cursor.fetchone ()
 while (data!=None):
-  print (data)
   player = data[0].replace(' ', '')
   top_players.append(player)
   played_games.append(data[1])
   data = cursor.fetchone ()
-print("-------------------------------------------------")
+#print("-------------------------------------------------")
  
 query = '''SELECT
-    faction, faction_victories, ROUND((faction_victories/all_victories * 100),0)
+    faction_name, faction_victories
 FROM
-    (SELECT faction, count(faction) AS faction_victories
-      FROM participant 
-      WHERE participant.victory_status=\'[winner]\'
-     GROUP by faction),
-     (SELECT count(participant.victory_status) AS all_victories
-      FROM participant
-      WHERE participant.victory_status=\'[winner]\') '''
+    (SELECT faction_name, count(faction_name) AS faction_victories
+      FROM work_table 
+      WHERE (faction_name = player1_faction AND victory_status = 1) OR (faction_name = player2_faction AND victory_status = 0)
+     GROUP by faction_name)'''
 cursor.execute (query)
 
 factions = []
 percentage = []
-x = 0
 
 data = cursor.fetchone ()
 while (data!=None):
-  print (data)
-  if data[0] == "T ":
-    x = "Terran"
-  elif data[0] == "Z ":
-    x = "Zerg"
-  else:
-    x = "Protoss"
-  factions.append(x)
+  factions.append(data[0])
   percentage.append(data[1])
   data = cursor.fetchone ()
 
 
-print("-------------------------------------------------")
+#print("-------------------------------------------------")
  
-query = 'SELECT match_date, COUNT(match_date) FROM match GROUP BY match_date ORDER BY match_date'
+query = 'SELECT match_date, COUNT(match_date) FROM work_table GROUP BY match_date ORDER BY match_date'
 cursor.execute (query)
 
 number_of_games = []
@@ -80,13 +66,11 @@ dates = []
 
 data = cursor.fetchone ()
 while (data!=None):
-  print (data)
+
   dates.append(data[0])
   number_of_games.append(data[1])
   data = cursor.fetchone ()
 
-print (dates)
-print (number_of_games)
  
 cursor.close ()
  
